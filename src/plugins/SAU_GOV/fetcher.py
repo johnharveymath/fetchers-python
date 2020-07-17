@@ -31,7 +31,7 @@ class SAGOVFetcher(BaseEpidemiologyFetcher):
     SOURCE = 'SAU_GOV'
     
     def process_data(self,data):
-        
+        #loop through nested dictionaies and lists 
         df = pd.DataFrame()
         lst = []
         
@@ -45,6 +45,7 @@ class SAGOVFetcher(BaseEpidemiologyFetcher):
         
         return df
     
+    # convert esriFieldTypeDate to ('%Y-%m-%d') 
     def convert_date(self,df):
         
         for i in range(len(df)): 
@@ -54,36 +55,35 @@ class SAGOVFetcher(BaseEpidemiologyFetcher):
             
         return df
     
+    
+    
     def fetch_daily_cases(self):
         url = 'https://services6.arcgis.com/bKYAIlQgwHslVRaK/arcgis/rest/services/VWPlacesCasesHostedView/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
-        data = requests.get(url).json()
-        
-        df = self.process_data(data)
-        
+        data = requests.get(url).json()        
+        df = self.process_data(data)        
         df = self.convert_date(df)
             
         return df
     
     def fetch_cases_by_region(self):
         url = 'https://services6.arcgis.com/bKYAIlQgwHslVRaK/arcgis/rest/services/CasesByRegion_ViewLayer/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
-        data = requests.get(url).json()
-        
+        data = requests.get(url).json()        
         df = self.process_data(data)
                                 
         return df
     
     def fetch_cases_by_date(self):
         url = 'https://services6.arcgis.com/bKYAIlQgwHslVRaK/arcgis/rest/services/Cumulative_Date_Grouped_ViewLayer/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json'
-        data = requests.get(url).json()
-        
-        df = self.process_data(data)        
-             
+        data = requests.get(url).json()        
+        df = self.process_data(data)            
         df = self.convert_date(df)           
                           
         return df
-    
+    #run_cases_by_date provides national level data by date 
     def run_cases_by_date(self):
         logger.info("Processing cases by date for Saudi Arabia")
+        
+        
    
         data = self.fetch_cases_by_date()
         
@@ -111,12 +111,14 @@ class SAGOVFetcher(BaseEpidemiologyFetcher):
                 }
         
                 self.upsert_data(**upsert_obj)
-    
+                
+    # run_cases_by_region() provides cumulative daily regional (level 1) data 
     def run_cases_by_region(self):
         logger.info("Processing cases by region for Saudi Arabia")
                     
         data = self.fetch_cases_by_region()
         
+        #Last updated date is not present in the source
         date_ = date.today().strftime('%Y-%m-%d')   
         
         for index, record in data.iterrows():
@@ -148,7 +150,8 @@ class SAGOVFetcher(BaseEpidemiologyFetcher):
                 }
         
                 self.upsert_data(**upsert_obj)
-
+    
+    # run_daily_cases() provides level 1 and level 2 date by date 
     def run_daily_cases(self):
         logger.info("Processing Daily Cases for Saudi Arabia")
 
@@ -191,7 +194,9 @@ class SAGOVFetcher(BaseEpidemiologyFetcher):
     
     def run(self):
         
+              
         self.run_cases_by_region()
         self.run_cases_by_date()
+        self.run_daily_cases()
         
         
