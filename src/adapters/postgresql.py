@@ -129,21 +129,17 @@ class PostgresqlHelper(AbstractAdapter):
 
     def upsert_table_data(self, table_name: str, data_keys: List, **kwargs):
         self.check_if_gid_exists(kwargs)
-        target = ["date", "country", "countrycode", "COALESCE(adm_area_1, '')", "COALESCE(adm_area_2, '')",
-                  "COALESCE(adm_area_3, '')", "source"]
-
-        if 'msoa' in data_keys:
-            target.append('msoa')
-
         sql_query = sql.SQL("""INSERT INTO {table_name} ({insert_keys}) VALUES ({insert_data})
                                 ON CONFLICT
-                                    (""" + ",".join(target) + """)
+                                    (date, country, countrycode, COALESCE(adm_area_1, ''), COALESCE(adm_area_2, ''),
+                                     COALESCE(adm_area_3, ''), {msoa_field}source)
                                 DO
                                     UPDATE SET {update_data}
                                 RETURNING *""").format(
             table_name=sql.Identifier(table_name),
             insert_keys=sql.SQL(",").join(map(sql.Identifier, kwargs.keys())),
             insert_data=sql.SQL(",").join(map(sql.Placeholder, kwargs.keys())),
+            msoa_field=sql.SQL("msoa, ") if table_name == "epidemiology_england_msoa" else sql.SQL(""),
             update_data=sql.SQL(",").join(
                 sql.Composed([sql.Identifier(k), sql.SQL("="), sql.Placeholder(k)]) for k in kwargs.keys() if
                 k in data_keys)
